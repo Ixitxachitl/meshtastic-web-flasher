@@ -20,8 +20,6 @@ concurrency:
 env:
   FIRMWARE_REPO: Ixitxachitl/meshtastic-firmware
   FIRMWARE_REF: native-windows-tft-maps-swipe
-  SITE_BASE: /${{ github.event.repository.name }}/
-  SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
 
 jobs:
   version:
@@ -119,10 +117,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Site URL and path follow the repo's Pages settings (custom domain or github.io subpath).
+      - id: pages
+        uses: actions/configure-pages@v5
+
       - name: Build flasher
         env:
-          NUXT_APP_BASE_URL: ${{ env.SITE_BASE }}
-          NIGHTLY_BASE: ${{ env.SITE_URL }}/firmware
+          NUXT_APP_BASE_URL: ${{ steps.pages.outputs.base_path }}/
+          NIGHTLY_BASE: ${{ steps.pages.outputs.base_url }}/firmware
         run: pnpm generate
 
       - uses: actions/download-artifact@v4
