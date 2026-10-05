@@ -124,7 +124,7 @@ jobs:
       - name: Build flasher
         env:
           NUXT_APP_BASE_URL: ${{ steps.pages.outputs.base_path }}/
-          NIGHTLY_BASE: ${{ steps.pages.outputs.base_url }}/firmware
+          NIGHTLY_BASE: ${{ steps.pages.outputs.base_path }}/firmware # same-origin path, no scheme
         run: pnpm generate
 
       - uses: actions/download-artifact@v4
