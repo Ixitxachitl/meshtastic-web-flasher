@@ -267,7 +267,7 @@
       </p>
     </div>
 
-    <!-- Standard variant -->
+    <!-- Standard variant: the stingray mascot, which carries the Meshtastic mark itself -->
     <div
       v-else
       class="logo-header-content"
@@ -275,16 +275,9 @@
       <div class="logo-container">
         <div class="logo-glow">
           <img
-            v-if="themeStore.isDark"
-            src="@/assets/img/logo.svg"
-            class="logo-icon"
-            alt="Meshtastic Logo"
-          >
-          <img
-            v-else
-            src="@/assets/img/logo-dark.svg"
-            class="logo-icon"
-            alt="Meshtastic Logo"
+            src="@/assets/img/stingray.png"
+            class="logo-icon logo-mascot"
+            alt="Meshtastic stingray mascot"
           >
         </div>
       </div>
@@ -353,6 +346,26 @@ const { eventMode } = useEventMode()
   object-fit: contain;
   filter: drop-shadow(0 0 20px var(--accent-glow));
   transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+/* Wider than tall and more detailed than the plain mark, so it gets more room. */
+.logo-icon.logo-mascot {
+  height: 6rem;
+  width: auto;
+}
+
+@media (min-width: 640px) {
+  .logo-icon.logo-mascot {
+    height: 7.5rem;
+    width: auto;
+  }
+}
+
+@media (min-width: 768px) {
+  .logo-icon.logo-mascot {
+    height: 9rem;
+    width: auto;
+  }
 }
 
 .logo-icon:hover {
