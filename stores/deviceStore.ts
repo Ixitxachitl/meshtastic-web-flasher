@@ -6,6 +6,8 @@ import {
 } from '~/types/resources'
 import { applyEventDeviceOverrides } from '~/utils/eventDevices'
 import { isUnsupportedDevice } from '~/utils/unsupportedDevices'
+import { withBase } from '~/utils/basePath'
+import { NIGHTLY_ONLY } from '~/utils/firmwareUrl'
 import { addRumAction, boardAttributes, eventAttributes, setTelemetryContext } from '~/utils/telemetry'
 
 import { MeshDevice } from '@meshtastic/core'
@@ -17,6 +19,9 @@ import { createUrl } from './store'
 import { useFirmwareStore } from './firmwareStore'
 import { useSerialMonitorStore } from './serialMonitorStore'
 import { useToastStore } from './toastStore'
+
+// Fork: the only boards this flasher offers, all built by our nightly (base UI only, no MUI).
+const NIGHTLY_TARGETS = ['t-deck', 'thinknode_m9', 't-watch-ultra', 'seeed-sensecap-indicator']
 
 // Ensure Web Serial API types are available and extend them safely
 declare global {
@@ -185,7 +190,7 @@ export const useDeviceStore = defineStore('device', {
         console.error(ex)
         // Fallback to offline list from the JSON file
         try {
-          const response = await fetch('/data/hardware-list.json')
+          const response = await fetch(withBase('/data/hardware-list.json'))
           if (response.ok) {
             const offlineHardwareList = await response.json()
             this.setTargetsList(offlineHardwareList)
@@ -202,9 +207,14 @@ export const useDeviceStore = defineStore('device', {
     setTargetsList(targets: DeviceHardware[]) {
       // meshtasticd targets are never flashable from here, whatever their
       // support status, so they are dropped from both lists up front.
-      const flashable = targets.filter(
-        (t: DeviceHardware) => !t.architecture.toLowerCase().startsWith('portduino'),
-      )
+      // Fork: a nightly-only build keeps just our boards, as supported and without MUI.
+      const flashable = NIGHTLY_ONLY
+        ? targets
+            .filter((t: DeviceHardware) => NIGHTLY_TARGETS.includes(t.platformioTarget))
+            .map((t: DeviceHardware) => ({ ...t, activelySupported: true, hasMui: false }))
+        : targets.filter(
+            (t: DeviceHardware) => !t.architecture.toLowerCase().startsWith('portduino'),
+          )
       if (vendorCobrandingTag.length > 0) {
         this.apiTargets = flashable.filter(
           (t: DeviceHardware) => t.activelySupported && t.tags?.includes(vendorCobrandingTag),
@@ -232,6 +242,9 @@ export const useDeviceStore = defineStore('device', {
       if (isUnsupportedDevice(target)) {
         const nightly = firmwareStore.unlockNightly
         if (nightly) firmwareStore.setSelectedFirmware(nightly)
+      }
+      else if (!firmwareStore.hasFirmwareFile && !firmwareStore.hasOnlineFirmware && !firmwareStore.prDeepLinkPending && NIGHTLY_ONLY && firmwareStore.nightly.length > 0) {
+        firmwareStore.setSelectedFirmware(firmwareStore.nightly[0])
       }
       else if (!firmwareStore.hasFirmwareFile && !firmwareStore.hasOnlineFirmware && !firmwareStore.prDeepLinkPending && firmwareStore.stable.length > 0) {
         firmwareStore.setSelectedFirmware(firmwareStore.stable[0])

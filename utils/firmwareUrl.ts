@@ -7,7 +7,10 @@ import { eventMode } from '~/types/resources'
 export const RELEASE_BASE = 'https://release.meshtastic.org'
 
 // Nightlies live in their own bucket/host, flat: everything sits at the root.
-export const NIGHTLY_BASE = 'https://nightly.meshtastic.org'
+export const NIGHTLY_BASE = process.env.NIGHTLY_BASE || 'https://nightly.meshtastic.org'
+
+// Fork: built against our own nightly host, so only our boards and that nightly are offered.
+export const NIGHTLY_ONLY = NIGHTLY_BASE !== 'https://nightly.meshtastic.org'
 
 // Nightly (develop) build version, discovered at runtime from
 // nightly.meshtastic.org/index.json (never surfaced in event mode). Reactive so

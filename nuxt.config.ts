@@ -7,6 +7,10 @@ import { defineNuxtConfig } from 'nuxt/config'
 // API_ORIGIN=https://api.meshtastic.org rolls back to the Railway server.
 const apiOrigin = process.env.API_ORIGIN || 'https://api.meshtastic.org'
 
+// Fork: served from a GitHub Pages project subpath, flashing only our own nightly.
+const appBaseUrl = process.env.NUXT_APP_BASE_URL || '/'
+const nightlyBase = process.env.NIGHTLY_BASE || 'https://nightly.meshtastic.org'
+
 const ignoredDevWatchPaths = [
   '**/.claude/**',
   '**/.git/**',
@@ -24,6 +28,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   app: {
+    baseURL: appBaseUrl,
     head: {
       script: process.env.COOKIEYES_CLIENT_ID
         ? [
@@ -80,6 +85,8 @@ export default defineNuxtConfig({
     // same way so stores/store.ts reads a real value client-side.
     define: {
       'process.env.API_ORIGIN': JSON.stringify(apiOrigin),
+      'process.env.APP_BASE_URL': JSON.stringify(appBaseUrl),
+      'process.env.NIGHTLY_BASE': JSON.stringify(nightlyBase),
     },
     // xz-decompress is a UMD bundle (with inlined WASM). Pre-bundle it so esbuild
     // takes its CommonJS branch; served raw, its UMD global path dereferences an

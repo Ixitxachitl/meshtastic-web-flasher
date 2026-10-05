@@ -19,6 +19,7 @@ import {
 import {
   getFirmwareBaseUrl,
   NIGHTLY_BASE,
+  NIGHTLY_ONLY,
   nightlyState,
   setNightlyVersion,
 } from '~/utils/firmwareUrl'
@@ -57,6 +58,7 @@ import {
 } from '../types/manifest'
 
 import { createUrl } from './store'
+import { useDeviceStore } from './deviceStore'
 import { useToastStore } from './toastStore'
 
 const previews = showPrerelease ? [currentPrerelease] : []
@@ -260,6 +262,9 @@ export const useFirmwareStore = defineStore('firmware', {
         return
       }
 
+      // Fork: only our own nightly is offered, never upstream's releases.
+      if (NIGHTLY_ONLY) return
+
       firmwareApi.get<FirmwareReleases>()
         .then(async (response: FirmwareReleases) => {
           // Fetch release notes for each firmware version from release.meshtastic.org
@@ -318,6 +323,9 @@ export const useFirmwareStore = defineStore('firmware', {
           id,
           title: data.title ?? `Meshtastic Firmware ${version} Nightly`,
         }]
+        if (NIGHTLY_ONLY && useDeviceStore().selectedTarget?.hwModel && !this.selectedFirmware?.id && !this.hasFirmwareFile) {
+          await this.setSelectedFirmware(this.nightly[0])
+        }
       }
       catch (error) {
         console.warn('No nightly build available', error)

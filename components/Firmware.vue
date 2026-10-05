@@ -142,13 +142,13 @@
             </li>
           </ul>
           <div
-            v-if="!store.couldntFetchFirmwareApi"
+            v-if="!store.couldntFetchFirmwareApi && store.$state.alpha.length > 0"
             class="px-4 py-2 text-sm text-warning font-semibold border-theme-bottom border-theme-top"
           >
             {{ $t('firmware.unstable') }}
           </div>
           <ul
-            v-if="!store.couldntFetchFirmwareApi"
+            v-if="!store.couldntFetchFirmwareApi && store.$state.alpha.length > 0"
             class="py-2 text-sm text-theme-muted"
             aria-labelledby="dropdownInformationButton"
           >
@@ -163,13 +163,13 @@
             </li>
           </ul>
           <div
-            v-if="!store.couldntFetchFirmwareApi"
+            v-if="!store.couldntFetchFirmwareApi && store.$state.stable.length > 0"
             class="px-4 py-2 text-sm text-green-400 font-semibold border-theme-bottom border-theme-top"
           >
             {{ $t('firmware.stable') }}
           </div>
           <ul
-            v-if="!store.couldntFetchFirmwareApi"
+            v-if="!store.couldntFetchFirmwareApi && store.$state.stable.length > 0"
             class="py-2 text-sm text-theme-muted"
             aria-labelledby="dropdownInformationButton"
           >

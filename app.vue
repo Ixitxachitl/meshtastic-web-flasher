@@ -283,6 +283,8 @@ import { useSerialMonitorStore } from './stores/serialMonitorStore'
 import { useThemeStore } from './stores/themeStore'
 import { useToastStore } from './stores/toastStore'
 import { useEventMode } from '~/composables/useEventMode'
+import { withBase } from '~/utils/basePath'
+import { NIGHTLY_ONLY } from '~/utils/firmwareUrl'
 import SurveyBanner from '~/components/survey/SurveyBanner.vue'
 import SurveyView from '~/components/survey/SurveyView.vue'
 
@@ -406,9 +408,9 @@ const monitorSerial = async () => {
 
 const selectedDeviceImage = computed(() => {
   if (deviceStore.selectedTarget?.images?.length) {
-    return `/img/devices/${deviceStore.selectedTarget.images[0]}`
+    return withBase(`/img/devices/${deviceStore.selectedTarget.images[0]}`)
   }
-  return themeStore.isDark ? '/img/devices/unknown-new.svg' : '/img/devices/unknown-new-light.svg'
+  return withBase(themeStore.isDark ? '/img/devices/unknown-new.svg' : '/img/devices/unknown-new-light.svg')
 })
 
 const connectionButtonLabel = computed(() => {
@@ -465,6 +467,8 @@ window.addEventListener('keydown', (event) => {
   // timing differs across browsers/OSes, so this was a common reason the code
   // "wouldn't trigger" for some testers.
   if (event.repeat) return
+  // Fork: no Konami code in the nightly-only flasher.
+  if (NIGHTLY_ONLY) return
 
   const expectedKey = konamiKeys[konamiCodeIndex.value]
   // Case-insensitive compare so Shift / Caps Lock on the final b/a still match.

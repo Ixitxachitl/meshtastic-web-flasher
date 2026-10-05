@@ -1,0 +1,160 @@
+name: Nightly flasher (GitHub Pages)
+
+# Builds our four boards from the firmware fork and publishes them, together with
+# the flasher itself, to GitHub Pages. The site is replaced on every run.
+
+on:
+  schedule:
+    - cron: 0 8 * * *
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-pages
+  cancel-in-progress: true
+
+env:
+  FIRMWARE_REPO: Ixitxachitl/meshtastic-firmware
+  FIRMWARE_REF: native-windows-tft-maps-swipe
+  SITE_BASE: /${{ github.event.repository.name }}/
+  SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      long: ${{ steps.v.outputs.long }}
+      sha: ${{ steps.v.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.FIRMWARE_REPO }}
+          ref: ${{ env.FIRMWARE_REF }}
+      - id: v
+        env:
+          BUILD_LOCATION: local
+        run: |
+          echo "long=$(./bin/buildinfo.py long)" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+  build:
+    needs: version
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [t-deck, thinknode_m9, t-watch-ultra, seeed-sensecap-indicator]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.FIRMWARE_REPO }}
+          ref: ${{ needs.version.outputs.sha }}
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+          cache: pip
+          cache-dependency-path: .github/actions/setup-base/requirements.txt
+
+      - run: pip install -r .github/actions/setup-base/requirements.txt
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ matrix.env }}-${{ hashFiles('**/platformio.ini') }}
+          restore-keys: pio-${{ matrix.env }}-
+
+      - name: Build
+        env:
+          BUILD_LOCATION: local
+        run: |
+          mkdir -p release
+          ./bin/build-esp32.sh ${{ matrix.env }}
+
+      # Same as upstream build_firmware.yml: the unified OTA loader goes in app1.
+      - name: Add unified OTA image to manifest
+        working-directory: release
+        run: |
+          OTA_FILE=mt-esp32s3-ota.bin
+          curl -fsSL -o "$OTA_FILE" https://github.com/meshtastic/esp32-unified-ota/releases/latest/download/$OTA_FILE
+          OTA_MD5=$(md5sum "$OTA_FILE" | cut -d' ' -f1)
+          OTA_SIZE=$(stat -c%s "$OTA_FILE")
+          for manifest in firmware-*.mt.json; do
+            jq --arg name "$OTA_FILE" --arg md5 "$OTA_MD5" --argjson bytes "$OTA_SIZE" --arg part app1 \
+              'if .files | map(select(.name == $name)) | length == 0 then .files += [{"name": $name, "md5": $md5, "bytes": $bytes, "part_name": $part}] else . end' \
+              "$manifest" > "$manifest.tmp" && mv "$manifest.tmp" "$manifest"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fw-${{ matrix.env }}
+          path: |
+            release/*.mt.json
+            release/*.bin
+
+  deploy:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build flasher
+        env:
+          NUXT_APP_BASE_URL: ${{ env.SITE_BASE }}
+          NIGHTLY_BASE: ${{ env.SITE_URL }}/firmware
+        run: pnpm generate
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: fw-*
+          merge-multiple: true
+          path: .output/public/firmware
+
+      - name: Write nightly index and release manifest
+        working-directory: .output/public/firmware
+        env:
+          VER: ${{ needs.version.outputs.long }}
+          SHA: ${{ needs.version.outputs.sha }}
+        run: |
+          set -euo pipefail
+          ls firmware-*.bin > /dev/null # fail closed on an empty publish
+          jq -n --arg ver "$VER" '{version: $ver, targets: [
+            {board: "t-deck", platform: "esp32s3"},
+            {board: "thinknode_m9", platform: "esp32s3"},
+            {board: "t-watch-ultra", platform: "esp32s3"},
+            {board: "seeed-sensecap-indicator", platform: "esp32s3"}
+          ]}' > "firmware-$VER.json"
+          jq -n --arg ver "$VER" --arg sha "$SHA" \
+            '{version: $ver, id: ("v" + $ver), title: ("Meshtastic Firmware " + $ver + " Nightly"), commit: $sha}' > index.json
+          printf '# Nightly %s\n\nBuilt from %s@%s\n' "$VER" "$FIRMWARE_REPO" "$SHA" > release_notes.md
+          touch ../.nojekyll
+          ls -l
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .output/public
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
