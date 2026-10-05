@@ -57,17 +57,16 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12' # SCons in PlatformIO breaks on 3.14
-          cache: pip
-          cache-dependency-path: .github/actions/setup-base/requirements.txt
+          python-version: '3.14'
 
-      - run: pip install -r .github/actions/setup-base/requirements.txt
+      # Same as meshtastic/gh-action-firmware for ESP32: pioarduino's core, not stock platformio.
+      - run: pip install pioarduino==6.2.0 nanopb==0.4.9.1 'grpcio-tools>=1.43.0,<2'
 
       - uses: actions/cache@v4
         with:
           path: ~/.platformio
-          key: pio-py312-${{ matrix.env }}-${{ hashFiles('**/platformio.ini') }}
-          restore-keys: pio-py312-${{ matrix.env }}-
+          key: pio-pioarduino-${{ matrix.env }}-${{ hashFiles('**/platformio.ini') }}
+          restore-keys: pio-pioarduino-${{ matrix.env }}-
 
       - name: Build
         env:
