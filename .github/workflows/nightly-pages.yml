@@ -53,25 +53,15 @@ jobs:
           ref: ${{ needs.version.outputs.sha }}
           submodules: recursive
 
-      - uses: actions/setup-python@v5
+      # Upstream's build container (pioarduino core and tools preinstalled) runs bin/build-esp32.sh.
+      - uses: meshtastic/gh-action-firmware@main
         with:
-          python-version: '3.14'
+          pio_platform: esp32s3
+          pio_env: ${{ matrix.env }}
+          pio_target: build
 
-      # Same as meshtastic/gh-action-firmware for ESP32: pioarduino's core, not stock platformio.
-      - run: pip install pioarduino==6.2.0 nanopb==0.4.9.1 'grpcio-tools>=1.43.0,<2'
-
-      - uses: actions/cache@v4
-        with:
-          path: ~/.platformio
-          key: pio-pioarduino-${{ matrix.env }}-${{ hashFiles('**/platformio.ini') }}
-          restore-keys: pio-pioarduino-${{ matrix.env }}-
-
-      - name: Build
-        env:
-          BUILD_LOCATION: local
-        run: |
-          mkdir -p release
-          ./bin/build-esp32.sh ${{ matrix.env }}
+      # The container writes as root.
+      - run: sudo chown -R "$(id -u):$(id -g)" release
 
       # Same as upstream build_firmware.yml: the unified OTA loader goes in app1.
       - name: Add unified OTA image to manifest
@@ -136,11 +126,13 @@ jobs:
       - name: Write nightly index and release manifest
         working-directory: .output/public/firmware
         env:
-          VER: ${{ needs.version.outputs.long }}
           SHA: ${{ needs.version.outputs.sha }}
         run: |
           set -euo pipefail
           ls firmware-*.bin > /dev/null # fail closed on an empty publish
+          # Version as stamped by the build itself, so index.json always matches the file names.
+          VER=$(ls firmware-t-deck-*.mt.json | sed -E 's/^firmware-t-deck-(.*)\.mt\.json$/\1/')
+          echo "Publishing $VER"
           jq -n --arg ver "$VER" '{version: $ver, targets: [
             {board: "t-deck", platform: "esp32s3"},
             {board: "thinknode_m9", platform: "esp32s3"},
