@@ -21,7 +21,7 @@ import { useSerialMonitorStore } from './serialMonitorStore'
 import { useToastStore } from './toastStore'
 
 // Fork: the only boards this flasher offers, all built by our nightly (base UI only, no MUI).
-const NIGHTLY_TARGETS = ['t-deck', 'thinknode_m9', 't-watch-ultra', 'seeed-sensecap-indicator']
+const NIGHTLY_TARGETS = ['t-deck', 'thinknode_m9', 't-watch-ultra', 'seeed-sensecap-indicator', 'heltec-mesh-node-t1']
 
 // Ensure Web Serial API types are available and extend them safely
 declare global {

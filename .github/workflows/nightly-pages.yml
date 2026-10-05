@@ -45,7 +45,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        env: [t-deck, thinknode_m9, t-watch-ultra, seeed-sensecap-indicator]
+        include:
+          - { env: t-deck, platform: esp32s3 }
+          - { env: thinknode_m9, platform: esp32s3 }
+          - { env: t-watch-ultra, platform: esp32s3 }
+          - { env: seeed-sensecap-indicator, platform: esp32s3 }
+          - { env: heltec-mesh-node-t1, platform: nrf52840 }
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,10 +58,10 @@ jobs:
           ref: ${{ needs.version.outputs.sha }}
           submodules: recursive
 
-      # Upstream's build container (pioarduino core and tools preinstalled) runs bin/build-esp32.sh.
+      # Upstream's build container for the platform runs bin/build-esp32.sh or bin/build-nrf52.sh.
       - uses: meshtastic/gh-action-firmware@main
         with:
-          pio_platform: esp32s3
+          pio_platform: ${{ matrix.platform }}
           pio_env: ${{ matrix.env }}
           pio_target: build
 
@@ -65,6 +70,7 @@ jobs:
 
       # Same as upstream build_firmware.yml: the unified OTA loader goes in app1.
       - name: Add unified OTA image to manifest
+        if: matrix.platform == 'esp32s3'
         working-directory: release
         run: |
           OTA_FILE=mt-esp32s3-ota.bin
@@ -80,9 +86,15 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: fw-${{ matrix.env }}
+          # firmware-* only: the nRF52 build also copies helper UF2s (the erase image) into release/.
           path: |
-            release/*.mt.json
-            release/*.bin
+            release/firmware-*.mt.json
+            release/firmware-*.bin
+            release/littlefs-*.bin
+            release/mt-*.bin
+            release/firmware-*.uf2
+            release/firmware-*.hex
+            release/firmware-*.zip
 
   deploy:
     needs: [version, build]
@@ -137,7 +149,8 @@ jobs:
             {board: "t-deck", platform: "esp32s3"},
             {board: "thinknode_m9", platform: "esp32s3"},
             {board: "t-watch-ultra", platform: "esp32s3"},
-            {board: "seeed-sensecap-indicator", platform: "esp32s3"}
+            {board: "seeed-sensecap-indicator", platform: "esp32s3"},
+            {board: "heltec-mesh-node-t1", platform: "nrf52840"}
           ]}' > "firmware-$VER.json"
           jq -n --arg ver "$VER" --arg sha "$SHA" \
             '{version: $ver, id: ("v" + $ver), title: ("Meshtastic Firmware " + $ver + " Nightly"), commit: $sha}' > index.json
