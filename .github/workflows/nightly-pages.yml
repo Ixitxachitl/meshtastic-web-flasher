@@ -96,8 +96,41 @@ jobs:
             release/firmware-*.hex
             release/firmware-*.zip
 
+  # The Indicator's RP2040 co-processor firmware, built the way that repo's own CI builds it.
+  indicator-companion:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: Ixitxachitl/indicator_rp2040
+          ref: beep-tones
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-indicator-rp2040-${{ hashFiles('platformio.ini') }}
+          restore-keys: pio-indicator-rp2040-
+
+      - run: pip install --upgrade https://github.com/pioarduino/platformio-core/archive/487a894a713d36acbd9d858267076d0ab957d543.zip
+
+      - run: pio run -e seeed_indicator_rp2040
+
+      - run: mkdir -p out && cp .pio/build/seeed_indicator_rp2040/firmware.uf2 out/indicator-rp2040.uf2
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: companion-indicator-rp2040
+          path: out/indicator-rp2040.uf2
+
   deploy:
-    needs: [version, build]
+    needs: [version, build, indicator-companion]
+    # A failed companion build only leaves its download out; the boards still publish.
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -133,6 +166,12 @@ jobs:
         with:
           pattern: fw-*
           merge-multiple: true
+          path: .output/public/firmware
+
+      - uses: actions/download-artifact@v4
+        if: needs.indicator-companion.result == 'success'
+        with:
+          name: companion-indicator-rp2040
           path: .output/public/firmware
 
       - name: Write nightly index and release manifest

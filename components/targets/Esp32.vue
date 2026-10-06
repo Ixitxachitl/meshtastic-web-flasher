@@ -1,6 +1,32 @@
 <template>
   <div class="space-y-6">
     <ReleaseNotes />
+    <!-- Fork: the Indicator's RP2040 co-processor runs its own firmware, flashed separately as a UF2 -->
+    <div
+      v-if="isIndicator"
+      class="p-4 rounded-lg shadow-sm step-card"
+    >
+      <h3 class="flex items-center mb-3 text-lg font-semibold text-theme">
+        RP2040 companion firmware
+      </h3>
+      <div class="flex p-4 text-sm rounded-lg alert-box">
+        <Info class="flex-shrink-0 inline w-5 h-5 me-3 mt-0.5" />
+        <div>
+          <p>
+            The Indicator's RP2040 co-processor runs its own firmware, built nightly from
+            Ixitxachitl/indicator_rp2040 (beep-tones). Put the RP2040 into its UF2 bootloader and copy this file
+            onto the drive that appears.
+          </p>
+          <a
+            :href="companionUf2Url"
+            download="indicator-rp2040.uf2"
+            class="inline-flex items-center gap-2 mt-3 px-4 py-2 text-sm font-medium text-gray-900 bg-meshtastic rounded-lg hover:bg-green-300 focus:ring-4 focus:ring-green-800 transition-colors"
+          >
+            Download RP2040 firmware (UF2)
+          </a>
+        </div>
+      </div>
+    </div>
     <ol
       v-if="firmwareStore.canShowFlash"
       class="relative ms-3.5 mb-6 border-theme-left"
@@ -207,11 +233,16 @@ import { useFirmwareStore } from '../../stores/firmwareStore'
 import { useToastStore } from '../../stores/toastStore'
 import { listZipEntries } from '~/utils/zipUtils'
 import { withBase } from '~/utils/basePath'
+import { NIGHTLY_BASE } from '~/utils/firmwareUrl'
 import ReleaseNotes from './ReleaseNotes.vue'
 
 const { t } = useI18n()
 
 const deviceStore = useDeviceStore()
+
+// Fork: the Indicator's co-processor firmware, published beside the nightly by the Pages workflow.
+const isIndicator = computed(() => deviceStore.$state.selectedTarget?.platformioTarget === 'seeed-sensecap-indicator')
+const companionUf2Url = `${NIGHTLY_BASE}/indicator-rp2040.uf2`
 const firmwareStore = useFirmwareStore()
 
 // Track success state for Chirpy celebration
