@@ -14,8 +14,13 @@
         <div>
           <p>
             The Indicator's RP2040 co-processor runs its own firmware, built nightly from
-            Ixitxachitl/indicator_rp2040 (beep-tones). Put the RP2040 into its UF2 bootloader and copy this file
-            onto the drive that appears.
+            Ixitxachitl/indicator_rp2040 (beep-tones). Put the RP2040 in BOOTSEL mode
+            (<a
+              href="https://wiki.seeedstudio.com/SenseCAP_Indicator_How_To_Flash_The_Default_Firmware/#flash-the-uf2-file"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="underline"
+            >Seeed's guide</a>) and copy this file onto the drive that appears.
           </p>
           <a
             :href="companionUf2Url"
