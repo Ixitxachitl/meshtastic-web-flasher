@@ -58,8 +58,22 @@ jobs:
           ref: ${{ needs.version.outputs.sha }}
           submodules: recursive
 
-      # Upstream's build container for the platform runs bin/build-esp32.sh or bin/build-nrf52.sh.
+      # ESP32-S3 on the 2026-10-09 build image, by digest: from 2026-10-10 the image fails every ESP32-S3 build,
+      # upstream's own included (No module named 'SCons.Tool.FortranCommon'). The same run the action does; back to
+      # the action once meshtastic/gh-action-firmware's image is fixed.
+      - name: Build (pinned image)
+        if: matrix.platform == 'esp32s3'
+        env:
+          MT_IMAGE: ghcr.io/meshtastic/gh-action-firmware@sha256:467a2c25275d5f43213e28a04ad0924a27d1e1ac625dc16e50ef919666d82b4d
+        run: |
+          docker pull --quiet "$MT_IMAGE"
+          docker run --rm -e GITHUB_ACTIONS -e PLATFORMIO_BUILD_DIR=/workspace/.pio/build \
+            -e MT_ENV=${{ matrix.env }} -e MT_PLATFORM=${{ matrix.platform }} -e MT_TARGET=build -e MT_VERBOSE=0 \
+            -v "$GITHUB_WORKSPACE:/workspace" "$MT_IMAGE"
+
+      # Upstream's build container for the platform runs bin/build-nrf52.sh.
       - uses: meshtastic/gh-action-firmware@main
+        if: matrix.platform != 'esp32s3'
         with:
           pio_platform: ${{ matrix.platform }}
           pio_env: ${{ matrix.env }}
