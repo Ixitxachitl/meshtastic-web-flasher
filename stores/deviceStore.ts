@@ -23,7 +23,11 @@ import { useToastStore } from './toastStore'
 // Fork: the only boards this flasher offers, all built by our nightly (base UI only, no MUI).
 const NIGHTLY_TARGETS = ['t-deck', 'thinknode_m9', 't-watch-ultra', 'seeed-sensecap-indicator', 'heltec-mesh-node-t1', 'seeed_wio_tracker_L2']
 // Hardware-list names that differ from the firmware env our nightly builds, and so names its files after.
-const NIGHTLY_ENV_FOR: Record<string, string> = { 'seeed-wio-tracker-l2': 'seeed_wio_tracker_L2' }
+// The live API lists the L2 by its MUI env; the bundled snapshot has an older name.
+const NIGHTLY_ENV_FOR: Record<string, string> = {
+  'seeed_wio_tracker_L2-tft': 'seeed_wio_tracker_L2',
+  'seeed-wio-tracker-l2': 'seeed_wio_tracker_L2',
+}
 
 // Ensure Web Serial API types are available and extend them safely
 declare global {
