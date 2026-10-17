@@ -21,7 +21,9 @@ import { useSerialMonitorStore } from './serialMonitorStore'
 import { useToastStore } from './toastStore'
 
 // Fork: the only boards this flasher offers, all built by our nightly (base UI only, no MUI).
-const NIGHTLY_TARGETS = ['t-deck', 'thinknode_m9', 't-watch-ultra', 'seeed-sensecap-indicator', 'heltec-mesh-node-t1']
+const NIGHTLY_TARGETS = ['t-deck', 'thinknode_m9', 't-watch-ultra', 'seeed-sensecap-indicator', 'heltec-mesh-node-t1', 'seeed_wio_tracker_L2']
+// Hardware-list names that differ from the firmware env our nightly builds, and so names its files after.
+const NIGHTLY_ENV_FOR: Record<string, string> = { 'seeed-wio-tracker-l2': 'seeed_wio_tracker_L2' }
 
 // Ensure Web Serial API types are available and extend them safely
 declare global {
@@ -210,6 +212,7 @@ export const useDeviceStore = defineStore('device', {
       // Fork: a nightly-only build keeps just our boards, as supported and without MUI.
       const flashable = NIGHTLY_ONLY
         ? targets
+            .map((t: DeviceHardware) => ({ ...t, platformioTarget: NIGHTLY_ENV_FOR[t.platformioTarget] ?? t.platformioTarget }))
             .filter((t: DeviceHardware) => NIGHTLY_TARGETS.includes(t.platformioTarget))
             .map((t: DeviceHardware) => ({ ...t, activelySupported: true, hasMui: false }))
         : targets.filter(
